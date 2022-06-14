@@ -110,3 +110,113 @@ function pagePos(e) {
         y: e.clientY + sTop - cToP
     }
 }
+// 盒子拖曳封装
+Element.prototype.dragclick = function (fn, menu) {
+    let sTime = 0,
+        eTime = 0,
+        cStime = 0,
+        cEtime = 0,
+        counter = 0,
+        infoArr = [],
+        t,
+        elWidth = getStyles(this, 'width'), // 盒子宽高
+        elHeight = getStyles(this, 'height'),
+        wWidth = getViewportSize().width, // 当前视口宽高
+        wHeight = getViewportSize().height,
+        mWidth = getStyles(menu, 'width'),
+        mHeight = getStyles(menu, 'height')
+    // 封装 物体拖曳函数
+    elemDrag.call(this)
+    function elemDrag() {
+        let x,
+            y,
+            _self = this
+        addEvent(_self, 'mousedown', function (e) {
+            var e = e || window.event,
+                btnCode = e.button
+            if (btnCode === 2) {
+                var mLeft = pagePos(e).X,
+                    mTop = pagePos(e).Y
+                if (mLeft <= 0) {
+                    mLeft = 0
+                } else if (mLeft >= wWidth - mWidth) {
+                    mLeft = pagePos(e).X - mWidth
+                }
+                if (mTop <= 0) {
+                    mTop = 0
+                } else if (mTop >= wHeight - mHeight) {
+                    mTop = pagePos(e).Y - mHeight
+                }
+                menu.style.left = mLeft + 'px'
+                menu.style.top = mTop + 'px'
+                menu.style.display = 'block'
+            } else if (btnCode === 0) {
+                sTime = new Date().getTime()
+                x = pagePos(e).X - getStyles(_self, 'left')
+                y = pagePos(e).Y - getStyles(_self, 'top')
+                infoArr = [getStyles(_self, 'left'), getStyles(_self, 'top')]
+                addEvent(document, 'mousemove', mouseMove)
+                addEvent(document, 'mouseup', mouseUp)
+                cancelBubble(e)
+                preventDefeaultEvent(e)
+            }
+        })
+        addEvent(document, 'contextmenu', function (e) {
+            var e = e || window.event
+            preventDefeaultEvent(e)
+        })
+        addEvent(document, 'click', function (e) {
+            menu.style.display = 'none'
+        })
+        addEvent(menu, 'click', function (e) {
+            var e = e || window.event
+            cancelBubble(e) // 阻止事件往document上冒泡
+        })
+        function mouseMove(e) {
+            menu.style.display = 'none'
+            var e = e || window.event,
+                eleLeft = pagePos(e).X - x,
+                eleTop = pagePos(e).Y - y
+            if (eleLeft <= 0) {
+                eleLeft = 0
+            } else if (eleLeft >= wWidth - elWidth) {
+                eleLeft = wWidth - elWidth
+                // console.log(eleLeft)
+            }
+
+            if (eleTop <= 0) {
+                eleTop = 0
+            } else if (eleTop >= wHeight - elHeight) {
+                eleTop = wHeight - elHeight - 1
+            }
+            _self.style.left = eleLeft + 'px'
+            _self.style.top = eleTop + 'px'
+        }
+        function mouseUp(e) {
+            var e = e || window.event
+            eTime = new Date().getTime()
+            if (eTime - sTime < 300) {
+                _self.style.left = infoArr[0] + 'px'
+                _self.style.top = infoArr[1] + 'px'
+                counter++
+                if (counter === 1) {
+                    cStime = new Date().getTime()
+                }
+                if (counter === 2) {
+                    cEtime = new Date().getTime()
+                }
+                if (cStime && cEtime && cEtime - cStime < 200) {
+                    fn()
+                }
+                t = setTimeout(function () {
+                    cStime = 0
+                    cEtime = 0
+                    counter = 0
+                    clearTimeout(t)
+                }, 500)
+            }
+            removeEvent(document, 'mousemove', mouseMove)
+            removeEvent(document, 'mouseup', mouseUp)
+        }
+    }
+}
